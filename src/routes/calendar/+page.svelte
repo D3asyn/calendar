@@ -5,19 +5,17 @@
 	let currentDate = new Date();
 	let startOfWeek = getStartOfWeek(currentDate);
 	let endOfWeek = getEndOfWeek(currentDate);
-	let selectedEvent = null; // To track the selected event for the modal
-	let showModal = false; // To control modal visibility
+	let selectedEvent = null;
+	let showModal = false;
 
-	// Function to get the start date of the current week
 	function getStartOfWeek(date) {
 		let day = date.getDay(),
-			diff = date.getDate() - day + (day == 0 ? -6 : 1); // Adjust for Sunday
+			diff = date.getDate() - day + (day == 0 ? -6 : 1);
 		let start = new Date(date.setDate(diff));
-		start.setHours(0, 0, 0, 0); // Set to midnight
+		start.setHours(0, 0, 0, 0);
 		return start;
 	}
 
-	// Function to get the end date of the current week
 	function getEndOfWeek(date) {
 		let start = getStartOfWeek(date);
 		let end = new Date(start);
@@ -25,7 +23,6 @@
 		return end;
 	}
 
-	// Update the week based on navigation
 	function changeWeek(weeks) {
 		currentDate.setDate(currentDate.getDate() + weeks * 7);
 		startOfWeek = getStartOfWeek(currentDate);
@@ -33,7 +30,6 @@
 		fetchEvents();
 	}
 
-	// Fetch events based on the current week
 	async function fetchEvents() {
 		try {
 			const response = await fetch(
@@ -41,7 +37,6 @@
 			);
 			const fetchedEvents = await response.json();
 
-			// Ensure each event's start date is parsed as a Date object
 			events = fetchedEvents.map((event) => ({
 				start: new Date(event.start),
 				text: event.text,
@@ -52,13 +47,11 @@
 		}
 	}
 
-	// Handle day click to show event details in the modal
 	function openModal(event) {
 		selectedEvent = event;
 		showModal = true;
 	}
 
-	// Close the modal
 	function closeModal() {
 		showModal = false;
 	}
@@ -72,60 +65,50 @@
 	<h1 class="mb-4 text-2xl font-bold">Weekly Calendar</h1>
 
 	<div class="mb-4 flex justify-between">
-		<button class="rounded bg-gray-300 p-2" on:click={() => changeWeek(-1)}> Previous Week </button>
+		<button class="rounded bg-gray-300 p-2" onclick={() => changeWeek(-1)}> Previous Week </button>
 		<h2 class="text-lg font-medium">
 			{startOfWeek.toDateString()} - {endOfWeek.toDateString()}
 		</h2>
-		<button class="rounded bg-gray-300 p-2" on:click={() => changeWeek(1)}> Next Week </button>
+		<button class="rounded bg-gray-300 p-2" onclick={() => changeWeek(1)}> Next Week </button>
 	</div>
 
-	<!-- Grid Layout for Days -->
-	<div class="grid grid-cols-7 gap-4">
+	<!-- Grid Layout for Days with 24-hour slots -->
+	<div class="grid grid-cols-7 gap-2">
 		{#each Array.from({ length: 7 }, (_, index) => {
-			// Calculate the day for each index
 			let day = new Date(startOfWeek);
 			day.setDate(startOfWeek.getDate() + index);
 			return day;
 		}) as day}
-			<div
-				class="flex min-h-[250px] flex-col items-start justify-start border-2 border-gray-300 p-4"
-			>
-				<!-- Display the day of the week -->
-				<div class="mb-2 text-center font-medium text-gray-700">
-					{day.toDateString().slice(0, 3)}
-				</div>
-
-				<!-- Display events for the day -->
-				{#if events.some((event) => event.start.getDate() === day.getDate())}
-					<div class="w-full">
-						{#each events as event}
-							{#if event.start.getDate() === day.getDate()}
-								<div class="mb-2 rounded-md border border-gray-300 p-2 shadow-sm">
-									<div class="text-sm font-medium text-blue-600">{event.text}</div>
-									<div class="text-xs text-gray-500">{event.location}</div>
-									<div class="text-xs text-gray-400">{event.start.toLocaleTimeString()}</div>
-									<button class="mt-1 text-xs text-blue-500" on:click={() => openModal(event)}>
-										Details
-									</button>
+			<div class="border border-gray-300 p-2">
+				<div class="text-center font-bold">{day.toDateString().slice(0, 3)}</div>
+				<div class="border-t">
+					{#each Array.from({ length: 24 }) as _, hour}
+						<div class="relative h-10 border-b border-gray-200">
+							<div class="absolute left-0 text-xs text-gray-500">{hour}:00</div>
+							{#each events.filter((event) => event.start.getDate() === day.getDate() && event.start.getHours() === hour) as event}
+								<div
+									class="absolute right-0 left-10 rounded-md bg-blue-200 p-1 shadow"
+									onclick={() => openModal(event)}
+								>
+									{event.text}
 								</div>
-							{/if}
-						{/each}
-					</div>
-				{:else}
-					<div class="text-center text-sm text-gray-500">No events</div>
-				{/if}
+							{/each}
+						</div>
+					{/each}
+				</div>
 			</div>
 		{/each}
 	</div>
 
-	<!-- Modal for Event Details -->
 	{#if showModal}
 		<div class="bg-opacity-50 fixed inset-0 z-50 flex items-center justify-center bg-black">
 			<div class="w-96 rounded-md bg-white p-6">
 				<h3 class="mb-2 text-xl font-bold">{selectedEvent.text}</h3>
 				<p class="mb-4 text-sm text-gray-700">{selectedEvent.location}</p>
-				<p class="text-sm text-gray-500">{selectedEvent.start.toDateString()}</p>
-				<button class="mt-4 w-full rounded bg-red-500 py-2 text-white" on:click={closeModal}>
+				<p class="text-sm text-gray-500">
+					{selectedEvent.start.toDateString()} at {selectedEvent.start.toLocaleTimeString()}
+				</p>
+				<button class="mt-4 w-full rounded bg-red-500 py-2 text-white" onclick={closeModal}>
 					Close
 				</button>
 			</div>
@@ -135,20 +118,10 @@
 
 <style>
 	.container {
-		max-width: 900px;
+		max-width: 1200px;
 	}
 
-	/* Style for each day in the grid */
 	.grid {
 		grid-template-columns: repeat(7, 1fr);
-	}
-
-	/* Increase the width and space between event items */
-	.event-item {
-		margin-bottom: 1rem;
-		padding: 0.5rem;
-		background-color: #f9f9f9;
-		border-radius: 8px;
-		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 	}
 </style>
